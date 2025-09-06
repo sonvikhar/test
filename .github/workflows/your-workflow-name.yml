@@ -1,1 +1,20 @@
+name: Deploy HTML Page to GitHub Pages
 
+on:
+  push:
+    branches:
+      - main # Trigger on pushes to the 'main' branch
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest # Use a fresh Ubuntu runner
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4 # Action to check out your repository code
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4 # Action specifically designed for deploying to GitHub Pages
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }} # GitHub's built-in token for authentication
+          publish_dir: ./ # The directory containing your static HTML files (e.g., your project root)
