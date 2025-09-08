@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: DFS
+  labels:
+    app: DFS
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: DFS
+  template:
+    metadata:
+      labels:
+        app: DFS
+    spec:
+      containers:
+        - name: DFS
+          image: IMAGE_PLACEHOLDER   # replace with all code in pipeline
+          ports:
+            - containerPort: 8080
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "500m"
+              memory: "1Gi"
+          env:
+            - name: ENVIRONMENT
+              value: "production"
