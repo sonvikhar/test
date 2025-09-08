@@ -1,0 +1,55 @@
+#code for Google Cloud Build --> deployment.yaml script
+steps:
+  # Set up variables 
+  - name: 'gcr.io/cloud-builders/git'
+    id: 'Get Commit SHA'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        echo "COMMIT_SHA=$(git rev-parse --short HEAD)" >> $BUILD_ENV
+    env:
+      - 'BUILD_ENV=/workspace/build.env'
+
+  # Build and push Docker image
+  - name: 'maven:3.8.7-openjdk-17'
+    id: 'Build and Push Image'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        source /workspace/build.env
+        IMAGE_TAG=${_REGION}-docker.pkg.dev/${_PROJECT_ID}/${_REPO}/${_IMAGE}:$COMMIT_SHA
+        mvn compile jib:build -Dimage=$IMAGE_TAG
+        echo "IMAGE_TAG=$IMAGE_TAG" >> /workspace/build.env
+    env:
+      - 'BUILD_ENV=/workspace/build.env'
+
+  # Substitute image tag in deployment.yaml
+  - name: 'gcr.io/cloud-builders/gcloud'
+    id: 'Substitute Image Tag'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        source /workspace/build.env
+        sed "s|IMAGE_PLACEHOLDER|$IMAGE_TAG|g" k8s/deployment.yaml > k8s/deployment-sub.yaml
+
+  # Authenticate kubectl and deploy to GKE
+  - name: 'gcr.io/cloud-builders/gcloud'
+    id: 'Deploy to GKE'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        gcloud container clusters get-credentials ${_CLUSTER_NAME} --region ${_REGION} --project ${_PROJECT_ID}
+        kubectl apply -f k8s/deployment-sub.yaml
+
+substitutions:
+  _PROJECT_ID: 'DFS project ID'
+  _REGION: 'us-east' 
+  _REPO: 'git-repo'
+  _IMAGE: 'docker-image-name'
+  _CLUSTER_NAME: 'gke-cluster'
+
+timeout: '3600s'
